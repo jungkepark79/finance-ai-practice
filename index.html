@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>손익 대시보드</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f5f3;
+    --surface-1: #fcfcfb;
+    --border: #e4e3df;
+    --grid: #ecebe7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --accent: #2a78d6;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #4a3aa7; --series-8: #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #111110;
+      --surface-1: #1a1a19;
+      --border: #2e2e2b;
+      --grid: #2a2a27;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #8f8e86;
+      --accent: #3987e5;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #111110;
+    --surface-1: #1a1a19;
+    --border: #2e2e2b;
+    --grid: #2a2a27;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --accent: #3987e5;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: "Pretendard", "Malgun Gothic", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  .sub { margin: 4px 0 0; color: var(--text-secondary); }
+
+  .seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; }
+  .seg button {
+    font: inherit; border: 0; background: transparent; color: var(--text-secondary);
+    padding: 6px 14px; border-radius: 7px; cursor: pointer; font-variant-numeric: tabular-nums;
+  }
+  .seg button:hover { color: var(--text-primary); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .card + .card { margin-top: 16px; }
+  .kpis .card + .card { margin-top: 0; }
+  button.card { font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+  button.card:hover { border-color: var(--text-muted); }
+  button.card[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .period { color: var(--text-secondary); font-size: 13px; margin: -8px 0 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+  th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; }
+  td:nth-child(2) { white-space: normal; }
+  tfoot td { font-weight: 700; border-bottom: 0; border-top: 1px solid var(--border); }
+  .table-scroll { overflow-x: auto; }
+  .muted { color: var(--text-muted); }
+  .kpi-label { color: var(--text-secondary); font-size: 13px; }
+  .kpi-value { margin-top: 6px; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .kpi-value small { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-left: 2px; }
+  .kpi-delta { margin-top: 6px; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .kpi-delta b { color: var(--text-primary); font-weight: 600; }
+
+  .chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .chart-head h2 { margin: 0; font-size: 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 8px; color: var(--text-secondary); font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .chart-box { position: relative; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tooltip {
+    position: absolute; pointer-events: none; display: none;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .tooltip .t-title { font-weight: 600; margin-bottom: 4px; }
+  .tooltip .t-row { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+  .tooltip .t-row b { margin-left: auto; padding-left: 12px; color: var(--text-primary); font-weight: 600; }
+  .tooltip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  @media (max-width: 760px) {
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .kpi-value { font-size: 21px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>손익 대시보드</h1>
+      <p class="sub">분개장 기준 · 단위 억원</p>
+    </div>
+    <div class="seg" id="years" role="group" aria-label="연도 선택"></div>
+  </header>
+
+  <p class="period" id="period"></p>
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card">
+    <div class="chart-head">
+      <h2 id="chart-title">월별 추이</h2>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="chart-box" id="chart-box">
+      <svg id="chart" role="img" aria-label="월별 추이 선 차트"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="chart-head">
+      <h2 id="table-title">계정과목별 상세</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>계정코드</th><th>계정과목</th><th>금액(원)</th><th>비중</th><th>전기 대비</th></tr>
+        </thead>
+        <tbody id="detail-body"></tbody>
+        <tfoot id="detail-foot"></tfoot>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+const DATA = {"2020": {"version": 2, "year": 2020, "annual": {"매출": 26701047823, "매출원가": 22932434729, "판관비": 2166550225, "영업이익": 1602062869}, "monthly": {"01": {"매출": 1875085142, "매출원가": 1463797082, "판관비": 153968681, "영업이익": 257319379}, "02": {"매출": 2006877556, "매출원가": 1662202623, "판관비": 156324983, "영업이익": 188349950}, "03": {"매출": 2928968264, "매출원가": 1924448825, "판관비": 188836526, "영업이익": 815682913}, "04": {"매출": 2447960896, "매출원가": 1856309461, "판관비": 179339464, "영업이익": 412311971}, "05": {"매출": 2303222612, "매출원가": 1835227586, "판관비": 180466685, "영업이익": 287528341}, "06": {"매출": 2175924960, "매출원가": 1963858931, "판관비": 177693812, "영업이익": 34372217}, "07": {"매출": 2273107854, "매출원가": 1966124365, "판관비": 183892887, "영업이익": 123090602}, "08": {"매출": 1922013141, "매출원가": 1825152235, "판관비": 162428479, "영업이익": -65567573}, "09": {"매출": 2095163677, "매출원가": 1874514562, "판관비": 166317450, "영업이익": 54331665}, "10": {"매출": 1933525306, "매출원가": 1734210581, "판관비": 179058977, "영업이익": 20255748}, "11": {"매출": 2313319454, "매출원가": 1978549471, "판관비": 207586303, "영업이익": 127183680}, "12": {"매출": 2425878961, "매출원가": 2848039007, "판관비": 230635978, "영업이익": -652796024}}, "accounts": {"매출": [{"code": "63110100", "name": "브랜드 광고영상 제작매출", "annual": 6917012222, "monthly": [621855885, 620138196, 1067200391, 717912475, 510545481, 494665026, 526167277, 381495441, 473997314, 354916520, 466429301, 681688915]}, {"code": "63110200", "name": "디지털 캠페인 콘텐츠매출", "annual": 6103010074, "monthly": [381029944, 449667214, 430747449, 508001340, 547009322, 584683649, 604299993, 484811070, 514178899, 483816882, 534358285, 580406027]}, {"code": "63110300", "name": "SNS·숏폼 콘텐츠매출", "annual": 6055397358, "monthly": [502902502, 569174512, 730732829, 563512530, 488350937, 396235576, 470788983, 459775924, 408634310, 496184436, 563322042, 405782777]}, {"code": "63110500", "name": "기업 홍보영상 제작매출", "annual": 3072649750, "monthly": [194052543, 208770782, 248053138, 266216187, 250475586, 294308148, 340747390, 248183325, 262461227, 266412968, 244639886, 248328570]}, {"code": "63110400", "name": "라이브커머스 제작매출", "annual": 3042182934, "monthly": [115182313, 101431030, 125646248, 329075941, 410510368, 310019504, 244264134, 252521936, 338798381, 234967018, 311260881, 268505180]}, {"code": "63110600", "name": "후반제작·모션그래픽 매출", "annual": 1510795485, "monthly": [60061955, 57695822, 326588209, 63242423, 96330918, 96013057, 86840077, 95225445, 97093546, 97227482, 193309059, 241167492]}], "매출원가": [{"code": "53109001", "name": "제작원가(직원급여)", "annual": 7507988644, "monthly": [412811944, 566339004, 571380143, 627814100, 636995643, 649144892, 552375415, 578500519, 532777282, 522517651, 551021489, 1306310562]}, {"code": "53109032", "name": "촬영·편집외주비", "annual": 5208926815, "monthly": [320059720, 352905176, 518114342, 412546657, 420293647, 449126734, 501867418, 411482548, 457464293, 380653072, 563606092, 420807116]}, {"code": "53109027", "name": "촬영차량·발전기연료비", "annual": 3076338643, "monthly": [207475221, 214222954, 240375104, 206907067, 250313747, 251049413, 261679582, 270782349, 276337705, 213296915, 284579684, 399318902]}, {"code": "53109029", "name": "촬영장비유지비", "annual": 1923098847, "monthly": [108376945, 120150085, 147881537, 162776060, 150938143, 176873186, 185158839, 127046162, 165866181, 196678677, 147283218, 234069814]}, {"code": "53109031", "name": "제작지원용역비", "annual": 1063182536, "monthly": [91703761, 92751986, 93414492, 90705547, 87466741, 89787619, 87530272, 81343268, 84931301, 88784621, 80802154, 93960774]}, {"code": "53109028", "name": "스튜디오전력비", "annual": 843859444, "monthly": [77031270, 68574802, 102207122, 61493905, 60660219, 59423647, 74058334, 72899906, 74018137, 53228144, 55884453, 84379505]}, {"code": "53109026", "name": "스튜디오·로케이션임차료", "annual": 751129896, "monthly": [62182742, 60702618, 68442382, 70387978, 33947788, 67366463, 72428789, 65014590, 59155372, 70959120, 64320361, 56221693]}, {"code": "53109003", "name": "제작원가(퇴직급여)", "annual": 687857466, "monthly": [50501092, 46657510, 47619598, 56102860, 48312937, 57595897, 46636393, 56275125, 59180445, 53391388, 81271011, 84313210]}, {"code": "53109022", "name": "제작원가(장비감가상각비)", "annual": 554229167, "monthly": [38366561, 39162695, 40005696, 48704238, 43957019, 47406869, 52062654, 45063308, 43213495, 44239144, 49690623, 62356865]}, {"code": "53109023", "name": "제작원가(세금과공과)", "annual": 299986827, "monthly": [23620759, 20398729, 23361389, 20141131, 20970683, 21047202, 24104978, 24444616, 28826509, 29031483, 25333842, 38705506]}, {"code": "53109011", "name": "제작원가(복리후생비-건강보험료)", "annual": 298309367, "monthly": [17700881, 15963809, 18788649, 23529307, 24855679, 26287266, 24917187, 25934451, 29404431, 29130490, 26159826, 35637391]}, {"code": "53109016", "name": "제작원가(복리후생비-급식비)", "annual": 161958728, "monthly": [13691664, 12681355, 12960365, 15895923, 15432584, 15474867, 12138263, 14359185, 11154521, 11235066, 11803560, 15131375]}, {"code": "53109015", "name": "제작원가(복리후생비-학비보조금)", "annual": 153861092, "monthly": [14300038, 13274120, 13476450, 15923882, 13774226, 16231418, 13218127, 15941056, 16757580, 6591893, 7251801, 7120501]}, {"code": "53109012", "name": "제작원가(복리후생비-고용보험료)", "annual": 80305781, "monthly": [5994335, 5395548, 6133801, 10043311, 5860277, 5923317, 5896513, 6137242, 6958393, 6813204, 6123048, 9026792]}, {"code": "53109013", "name": "제작원가(복리후생비-산재보험료)", "annual": 76455674, "monthly": [5669461, 5103130, 5801349, 9988621, 5542519, 5611048, 5576833, 5804511, 6581144, 6448484, 5791092, 8537482]}, {"code": "53109004", "name": "촬영보조인력비", "annual": 75412879, "monthly": [2101803, 2142292, 4149453, 5026361, 4150703, 6047942, 8568688, 12118615, 10787894, 5480320, 9536118, 5302690]}, {"code": "53109010", "name": "제작원가(복리후생비-기타)", "annual": 62870154, "monthly": [3124513, 4293284, 4150897, 6920289, 5820714, 6449119, 25810714, 6853090, 5393565, 8205200, 4191823, -18343054]}, {"code": "53109039", "name": "촬영장비임차료", "annual": 51015962, "monthly": [4644553, 3807282, 4808937, 4288130, 4657013, 4289431, 4219713, 3724479, 4055209, 4880321, 3674453, 3966441]}, {"code": "53109034", "name": "제작현장안전관리비", "annual": 36878666, "monthly": [3780868, 17149247, 0, 3181232, 0, 7054932, 3506340, 1294762, 0, 911285, 0, 0]}, {"code": "53109014", "name": "제작원가(복리후생비-직원경조금)", "annual": 12188821, "monthly": [0, 0, 1180388, 2919901, 1064420, 1181689, 1468103, 76402, 1385990, 1660580, 160972, 1090376]}, {"code": "53109036", "name": "제작원가(기타관리비)", "annual": 4491868, "monthly": [192256, 212238, 0, 782696, 0, 116702, 2816321, 56051, 53164, 73523, 63851, 125066]}, {"code": "53109038", "name": "제작원가(관계처경조금)", "annual": 2087452, "monthly": [466695, 314759, 196731, 230265, 212884, 369278, 84889, 0, 211951, 0, 0, 0]}], "판관비": [{"code": "72370000", "name": "감가상각비", "annual": 576746014, "monthly": [43151813, 44177913, 43240826, 52613859, 47540620, 51215300, 56783661, 46489560, 44447634, 46778294, 52542667, 47763867]}, {"code": "71120000", "name": "직원급여", "annual": 418774754, "monthly": [34952489, 34265628, 31643561, 33699631, 33930403, 34694673, 30722661, 34222175, 32103924, 32365795, 34903224, 51270590]}, {"code": "72410000", "name": "보험료", "annual": 244789432, "monthly": [22413410, 20410238, 23642342, 19993608, 21998770, 17757155, 21626753, 17859833, 17124108, 18305862, 22146897, 21510456]}, {"code": "72230000", "name": "소모품비", "annual": 190386656, "monthly": [10158059, 15727425, 28858790, 20175448, 16849097, 14360836, 12889659, 5024382, 8667467, 24482180, 23162015, 10031298]}, {"code": "72210000", "name": "통신비", "annual": 181675824, "monthly": [11059993, 11258115, 12736755, 16292741, 16776230, 16698880, 16376791, 16357775, 14722215, 16312355, 16235064, 16848910]}, {"code": "72490000", "name": "지급수수료", "annual": 180176708, "monthly": [3443367, 5845784, 20746324, 11099220, 12951375, 13429112, 12520889, 13704787, 16345025, 12542181, 24878603, 32670041]}, {"code": "72110000", "name": "복리후생비(기타)", "annual": 132355911, "monthly": [5766318, 6994446, 9608320, 5943393, 13491432, 7964676, 9183046, 7508450, 7606814, 7472809, 6210254, 44605953]}, {"code": "72350000", "name": "지급임차료", "annual": 50089786, "monthly": [3945433, 3766003, 4656068, 4367317, 3874554, 4324100, 4453571, 3775821, 4540169, 3789540, 4270305, 4326905]}, {"code": "72130000", "name": "여비와교통비", "annual": 34409280, "monthly": [3150438, 3053436, 2681855, 2630971, 3225107, 2330807, 3007226, 3240907, 2844774, 2946805, 3021616, 2275338]}, {"code": "72510000", "name": "접대비", "annual": 32808243, "monthly": [5736888, 2075648, 1497675, 4014683, 1916133, 2726578, 2671451, 1788214, 5024046, 2096292, 2031795, 1228840]}, {"code": "71820000", "name": "퇴직충당금전입액", "annual": 27672694, "monthly": [3046630, 2814754, 2872795, 3384573, 2914623, 3474645, 2813480, 3394966, 3570238, 3220995, 8740067, -12575072]}, {"code": "72250000", "name": "수도광열비", "annual": 27189253, "monthly": [2973335, 2477091, 2858696, 1305204, 1069945, 2382783, 2815236, 2279775, 2227509, 2021886, 2061259, 2716534]}, {"code": "72310000", "name": "세금과공과", "annual": 20125275, "monthly": [1413699, 994318, 1089026, 939733, 982034, 3380194, 5027489, 1347019, 1228525, 1274463, 1095997, 1352778]}, {"code": "72110011", "name": "복리후생비(건강보험료)", "annual": 15142946, "monthly": [1363559, 1226190, 1379512, 476311, 1227319, 1277376, 1269586, 1321418, 1498222, 1554244, 1237698, 1311511]}, {"code": "72390000", "name": "수선비", "annual": 11058208, "monthly": [94514, 0, 0, 397308, 405069, 146900, 451765, 2332687, 2687714, 0, 1831818, 2710433]}, {"code": "72110015", "name": "복리후생비(학비보조금)", "annual": 9326587, "monthly": [530904, 490497, 500612, 589794, 507900, 605490, 490275, 591605, 622147, 1452054, 1580227, 1365082]}, {"code": "72110016", "name": "복리후생비(급식비)", "annual": 3607235, "monthly": [291519, 291861, 290157, 306575, 312190, 307041, 245300, 295964, 254669, 249207, 268263, 494489]}, {"code": "72110012", "name": "복리후생비(고용보험료)", "annual": 3463040, "monthly": [250071, 224878, 252997, 496179, 253829, 264181, 262570, 273290, 309856, 321442, 273833, 279914]}, {"code": "72110013", "name": "복리후생비(산재보험료)", "annual": 3076004, "monthly": [0, 212700, 239296, 514453, 240055, 240909, 248322, 258460, 293042, 303999, 260039, 264729]}, {"code": "72110014", "name": "복리후생비(직원경조금)", "annual": 1527681, "monthly": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1527681, 0, 0]}, {"code": "72470000", "name": "교육훈련비", "annual": 1420762, "monthly": [143062, 0, 0, 0, 0, 16870, 0, 337155, 0, 0, 799000, 124675]}, {"code": "72150000", "name": "차량비", "annual": 583608, "monthly": [69623, 18058, 40919, 98463, 0, 95306, 33156, 24236, 68585, 40893, 35662, 58707]}, {"code": "72450000", "name": "도서인쇄비", "annual": 144324, "monthly": [13557, 0, 0, 0, 0, 0, 0, 0, 130767, 0, 0, 0]}]}}, "2021": {"version": 2, "year": 2021, "annual": {"매출": 39269602093, "매출원가": 34213678131, "판관비": 2699747836, "영업이익": 2356176126}, "monthly": {"01": {"매출": 2632386160, "매출원가": 2901730666, "판관비": 186775828, "영업이익": -456120334}, "02": {"매출": 2467992386, "매출원가": 2903058924, "판관비": 179973158, "영업이익": -615039696}, "03": {"매출": 2874644634, "매출원가": 2890171438, "판관비": 217708682, "영업이익": -233235486}, "04": {"매출": 3047042773, "매출원가": 2757299307, "판관비": 213496902, "영업이익": 76246564}, "05": {"매출": 2723957263, "매출원가": 3001515576, "판관비": 225092330, "영업이익": -502650643}, "06": {"매출": 2681835797, "매출원가": 2681901434, "판관비": 191679821, "영업이익": -191745458}, "07": {"매출": 3581182548, "매출원가": 3038153080, "판관비": 249313912, "영업이익": 293715556}, "08": {"매출": 3515298217, "매출원가": 2892080123, "판관비": 231479648, "영업이익": 391738446}, "09": {"매출": 3018419270, "매출원가": 2619590784, "판관비": 217426168, "영업이익": 181402318}, "10": {"매출": 3945424716, "매출원가": 2586071032, "판관비": 261975747, "영업이익": 1097377937}, "11": {"매출": 4093160666, "매출원가": 2944855587, "판관비": 232167078, "영업이익": 916138001}, "12": {"매출": 4688257663, "매출원가": 2997250180, "판관비": 292658562, "영업이익": 1398348921}}, "accounts": {"매출": [{"code": "63110100", "name": "브랜드 광고영상 제작매출", "annual": 12874185385, "monthly": [814577023, 638007665, 742111054, 943568749, 611721823, 786331999, 1462621338, 1341601033, 993682425, 1366612177, 1534098464, 1639251635]}, {"code": "63110200", "name": "디지털 캠페인 콘텐츠매출", "annual": 8410534374, "monthly": [606518882, 500435404, 577947118, 715442838, 740860595, 585266359, 681188285, 651756376, 680710645, 863242425, 816206658, 990958789]}, {"code": "63110300", "name": "SNS·숏폼 콘텐츠매출", "annual": 5819320914, "monthly": [401209559, 411710685, 620474473, 458146784, 334896756, 411343064, 496236892, 496177965, 308831572, 703839146, 506108673, 670345345]}, {"code": "63110400", "name": "라이브커머스 제작매출", "annual": 4874287690, "monthly": [286286137, 376586295, 295581045, 325668360, 425250119, 238283996, 328898903, 377188088, 493410452, 405296535, 566975723, 754862037]}, {"code": "63110600", "name": "후반제작·모션그래픽 매출", "annual": 3766857369, "monthly": [265909926, 285740840, 339948205, 286075281, 294285602, 336496330, 287889728, 370220440, 266636726, 367729419, 353017546, 312907326]}, {"code": "63110500", "name": "기업 홍보영상 제작매출", "annual": 3524416361, "monthly": [257884633, 255511497, 298582739, 318140761, 316942368, 324114049, 324347402, 278354315, 275147450, 238705014, 316753602, 319932531]}], "매출원가": [{"code": "53109001", "name": "제작원가(직원급여)", "annual": 10390839644, "monthly": [860475093, 943030130, 910739406, 772585710, 947789938, 762247434, 923811646, 787923938, 763389682, 781406782, 1009334753, 928105132]}, {"code": "53109032", "name": "촬영·편집외주비", "annual": 6500352478, "monthly": [484532892, 557818155, 559884546, 573012188, 564424337, 498294648, 532325177, 592566994, 448415797, 559102791, 523159501, 606815452]}, {"code": "53109027", "name": "촬영차량·발전기연료비", "annual": 4988268691, "monthly": [376795978, 385997917, 382888039, 402256077, 390622064, 364817723, 473884398, 403624312, 333522773, 466285046, 507697351, 499877013]}, {"code": "53109026", "name": "스튜디오·로케이션임차료", "annual": 4045842828, "monthly": [478518857, 383290270, 405699298, 366689749, 434265425, 357397341, 405649574, 376074349, 329147277, 123491184, 170004108, 215615396]}, {"code": "53109029", "name": "촬영장비유지비", "annual": 2017283507, "monthly": [216132512, 171854023, 185433238, 143807901, 144882426, 186978702, 196261757, 181718276, 162885733, 137049534, 169188405, 121091000]}, {"code": "53109022", "name": "제작원가(장비감가상각비)", "annual": 1274420843, "monthly": [46445472, 43670604, 45668757, 128708997, 133184902, 122406470, 127211808, 116349586, 146035683, 107696631, 130888191, 126153742]}, {"code": "53109031", "name": "제작지원용역비", "annual": 1099250699, "monthly": [99080348, 93784931, 83645475, 94548902, 83884702, 91950928, 87838334, 88387762, 107879102, 87757089, 86375031, 94118095]}, {"code": "53109028", "name": "스튜디오전력비", "annual": 922737161, "monthly": [85941920, 86367746, 62420548, 64339267, 57264772, 51385256, 69646528, 92176731, 109980494, 69465675, 73283577, 100464647]}, {"code": "53109003", "name": "제작원가(퇴직급여)", "annual": 869250927, "monthly": [61568078, 62729794, 70324810, 56264652, 60097832, 60267573, 62313000, 65387809, 62006399, 94632087, 114166657, 99492236]}, {"code": "53109023", "name": "제작원가(세금과공과)", "annual": 456089755, "monthly": [40780048, 40123356, 41461719, 35625914, 44091368, 39155440, 32573935, 43097291, 34545897, 37254507, 34038238, 33342042]}, {"code": "53109011", "name": "제작원가(복리후생비-건강보험료)", "annual": 387980976, "monthly": [38105061, 33182794, 36392269, 22901970, 36473138, 31435665, 29709136, 38454476, 29664259, 32513175, 29210818, 29938215]}, {"code": "53109039", "name": "촬영장비임차료", "annual": 313766331, "monthly": [29408918, 28838574, 25109355, 27469583, 27490314, 31487825, 24836650, 28693173, 23826004, 24046696, 21003361, 21555878]}, {"code": "53109016", "name": "제작원가(복리후생비-급식비)", "annual": 244248067, "monthly": [25035866, 21812776, 18267332, 16838525, 20787726, 16127572, 18801561, 16362733, 16382594, 15718670, 21631828, 36480884]}, {"code": "53109015", "name": "제작원가(복리후생비-학비보조금)", "annual": 235077712, "monthly": [19816408, 20167956, 22543302, 18198216, 19491322, 19555791, 20151689, 21107921, 21180425, 17213541, 18810165, 16840976]}, {"code": "53109004", "name": "촬영보조인력비", "annual": 137727709, "monthly": [15146029, 8579643, 11610703, 10985293, 10837853, 8804427, 12702585, 13054806, 9664795, 11900803, 10063885, 14376887]}, {"code": "53109012", "name": "제작원가(복리후생비-고용보험료)", "annual": 103031814, "monthly": [9264365, 9088125, 9934274, 7639681, 9493958, 8179737, 7805591, 9883063, 7877156, 8438573, 7605755, 7821536]}, {"code": "53109013", "name": "제작원가(복리후생비-산재보험료)", "annual": 94827482, "monthly": [8497144, 8372168, 9146352, 7007217, 8708017, 7792449, 7167671, 9072974, 7173341, 7740003, 6976105, 7174041]}, {"code": "53109010", "name": "제작원가(복리후생비-기타)", "annual": 76048951, "monthly": [2185452, 1636482, 5186423, 1458669, 4289547, 15102475, 3574153, 6672222, 4527380, 2032915, 9324532, 20058701]}, {"code": "53109034", "name": "제작현장안전관리비", "annual": 17199472, "monthly": [1451385, 525925, 0, 4400333, 533333, 4822964, 1244485, 612708, 828767, 1205448, 740080, 834044]}, {"code": "53109030", "name": "스튜디오시설수선비", "annual": 15749057, "monthly": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15749057]}, {"code": "53109014", "name": "제작원가(복리후생비-직원경조금)", "annual": 13542910, "monthly": [1714923, 1579217, 2984019, 1794927, 2058090, 2856880, 0, 244659, 0, 0, 169943, 140252]}, {"code": "53109036", "name": "제작원가(기타관리비)", "annual": 8693698, "monthly": [607769, 608338, 831573, 678645, 844512, 834134, 643402, 614340, 657226, 781307, 819406, 773046]}, {"code": "53109038", "name": "제작원가(관계처경조금)", "annual": 1447419, "monthly": [226148, 0, 0, 86891, 0, 0, 0, 0, 0, 338575, 363897, 431908]}], "판관비": [{"code": "72370000", "name": "감가상각비", "annual": 588106132, "monthly": [47330106, 44763083, 46685823, 52841380, 54702495, 50275513, 56238552, 51511651, 43150132, 40502656, 51842349, 48262392]}, {"code": "72410000", "name": "보험료", "annual": 476207144, "monthly": [22750744, 21597824, 20212484, 39909530, 50618335, 41325056, 44443789, 47114013, 43008058, 53597869, 42037380, 49592062]}, {"code": "71120000", "name": "직원급여", "annual": 431412972, "monthly": [38857949, 40889907, 39798900, 33710041, 40527682, 33509166, 39951138, 33433828, 26263275, 27754241, 37495362, 39221483]}, {"code": "72230000", "name": "소모품비", "annual": 257532758, "monthly": [14276816, 6823305, 16864843, 19789279, 6757446, 15943456, 38829552, 17635625, 6314001, 69805882, 11027333, 33465220]}, {"code": "72490000", "name": "지급수수료", "annual": 247548885, "monthly": [14880689, 16645206, 42460771, 13774273, 13413444, 3178832, 15614298, 25683089, 36766640, 20990097, 28413915, 15727631]}, {"code": "72210000", "name": "통신비", "annual": 226637590, "monthly": [18895865, 21187913, 17526486, 18323895, 18621326, 16652936, 18666566, 20847038, 19456647, 19698352, 18739064, 18021502]}, {"code": "72110000", "name": "복리후생비(기타)", "annual": 162913904, "monthly": [7305361, 7268151, 7923946, 10133852, 15790308, 9694275, 10298342, 9243996, 7179013, 8197721, 8825312, 61053627]}, {"code": "72350000", "name": "지급임차료", "annual": 50493725, "monthly": [3967692, 4107806, 4424977, 4706047, 4637701, 4541634, 4291474, 4604087, 4247268, 3531538, 3659055, 3774446]}, {"code": "72130000", "name": "여비와교통비", "annual": 45496779, "monthly": [3197398, 2516088, 4114988, 3497182, 3167975, 3586321, 4292507, 3805004, 2890145, 4414043, 4648285, 5366843]}, {"code": "71820000", "name": "퇴직충당금전입액", "annual": 45001095, "monthly": [3848005, 3920612, 4395300, 3516541, 3756114, 3766723, 3894563, 4086738, 3875400, 1685704, 5126265, 3129130]}, {"code": "72510000", "name": "접대비", "annual": 44399713, "monthly": [2916521, 2491354, 2930347, 3580454, 3272300, 2395951, 4147195, 2258662, 7254135, 4401619, 5256803, 3494372]}, {"code": "72390000", "name": "수선비", "annual": 29824086, "monthly": [966111, 117831, 2443545, 1632712, 2482505, 58030, 1342998, 973805, 7260031, 0, 8445971, 4100547]}, {"code": "72250000", "name": "수도광열비", "annual": 28857869, "monthly": [2285907, 3276738, 2797146, 2824062, 2769903, 2237597, 1571071, 2136735, 2853308, 2171535, 1674381, 2259486]}, {"code": "72310000", "name": "세금과공과", "annual": 18815857, "monthly": [2102756, 1187053, 1713022, 1087942, 1231568, 1190952, 1159581, 4757247, 1207329, 1278532, 940860, 959015]}, {"code": "72110011", "name": "복리후생비(건강보험료)", "annual": 14895868, "monthly": [1413409, 1372633, 1502536, 472530, 1521121, 1320191, 1243076, 1593275, 1260017, 1130957, 1023190, 1042933]}, {"code": "72110015", "name": "복리후생비(학비보조금)", "annual": 13997399, "monthly": [769601, 784122, 879060, 703308, 751223, 753345, 778913, 817348, 2202796, 1879197, 1952954, 1725532]}, {"code": "72110012", "name": "복리후생비(고용보험료)", "annual": 5459492, "monthly": [290276, 289576, 316981, 1579632, 320914, 654779, 506813, 336136, 285751, 223499, 299399, 355736]}, {"code": "72110016", "name": "복리후생비(급식비)", "annual": 4574520, "monthly": [393646, 419880, 406958, 343819, 420166, 339617, 412654, 333084, 338221, 343577, 439783, 383115]}, {"code": "72110013", "name": "복리후생비(산재보험료)", "annual": 4083428, "monthly": [266236, 265594, 290730, 967500, 294326, 255447, 414711, 308287, 263827, 204986, 259253, 292531]}, {"code": "72470000", "name": "교육훈련비", "annual": 1626435, "monthly": [0, 0, 0, 102923, 0, 0, 1184695, 0, 0, 0, 39224, 299593]}, {"code": "72110014", "name": "복리후생비(직원경조금)", "annual": 1254629, "monthly": [0, 0, 0, 0, 0, 0, 0, 0, 1254629, 0, 0, 0]}, {"code": "72150000", "name": "차량비", "annual": 500476, "monthly": [60740, 48482, 19839, 0, 35478, 0, 31424, 0, 95545, 163742, 20940, 24286]}, {"code": "72450000", "name": "도서인쇄비", "annual": 107080, "monthly": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107080]}]}}};
+
+const METRICS = ["매출", "매출원가", "판관비", "영업이익"];
+const YEARS = Object.keys(DATA).sort();
+const EOK = 100000000;
+// month: null이면 연간, 1~12면 해당 월
+const state = { year: YEARS[YEARS.length - 1], metric: "매출", month: null };
+
+const $ = (id) => document.getElementById(id);
+const seriesColor = (year) => `var(--series-${(YEARS.indexOf(year) % 8) + 1})`;
+const fmtEok = (v, digits = 1) => (v / EOK).toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const fmtWon = (v) => v.toLocaleString("ko-KR") + "원";
+
+function renderButtons(container, items, current, onPick, labelOf = (x) => x) {
+  container.innerHTML = "";
+  items.forEach((item) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = labelOf(item);
+    b.setAttribute("aria-pressed", String(item === current));
+    b.addEventListener("click", () => onPick(item));
+    container.appendChild(b);
+  });
+}
+
+const monthKey = (m) => String(m).padStart(2, "0");
+const prevYearOf = (y) => (DATA[String(Number(y) - 1)] ? String(Number(y) - 1) : null);
+
+// 선택 기간(연간 또는 월)의 항목 합계
+function periodTotals(year) {
+  const d = DATA[year];
+  return state.month ? d.monthly[monthKey(state.month)] : d.annual;
+}
+
+// 선택 기간의 계정 금액
+const accountAmount = (acc) => (state.month ? acc.monthly[state.month - 1] : acc.annual);
+
+function deltaText(cur, prev) {
+  if (prev === null || prev === undefined) return `<span class="muted">신규</span>`;
+  if (prev === 0) return `<span class="muted">–</span>`;
+  const rate = ((cur - prev) / Math.abs(prev)) * 100;
+  const arrow = rate > 0 ? "▲" : rate < 0 ? "▼" : "";
+  return `${arrow} ${Math.abs(rate).toFixed(1)}%`;
+}
+
+function renderKpis() {
+  const cur = periodTotals(state.year);
+  const prevYear = prevYearOf(state.year);
+  const prev = prevYear ? periodTotals(prevYear) : null;
+  $("period").textContent = `${state.year}년 ${state.month ? state.month + "월" : "연간"} 기준`;
+  $("kpis").innerHTML = METRICS.map((m) => {
+    const delta = prev ? `전기 대비 <b>${deltaText(cur[m], prev[m])}</b>` : "전기 데이터 없음";
+    return `<button type="button" class="card" data-metric="${m}" aria-pressed="${m === state.metric}">
+      <div class="kpi-label">${m}</div>
+      <div class="kpi-value" title="${fmtWon(cur[m])}">${fmtEok(cur[m])}<small>억원</small></div>
+      <div class="kpi-delta">${delta}</div>
+    </button>`;
+  }).join("");
+  $("kpis").querySelectorAll("button").forEach((b) =>
+    b.addEventListener("click", () => { state.metric = b.dataset.metric; render(); }));
+}
+
+// 영업이익은 구성 항목(매출·매출원가·판관비)을, 나머지는 계정과목을 행으로 쓴다
+function detailRows(year) {
+  if (state.metric === "영업이익") {
+    const t = periodTotals(year);
+    return ["매출", "매출원가", "판관비"].map((c) => ({
+      code: "", name: c === "매출" ? c : `(−) ${c}`, amount: t[c], key: c,
+    }));
+  }
+  return DATA[year].accounts[state.metric].map((a) => ({
+    code: a.code, name: a.name, amount: accountAmount(a), key: a.code,
+  }));
+}
+
+function renderTable() {
+  const prevYear = prevYearOf(state.year);
+  const rows = detailRows(state.year).filter((r) => r.amount !== 0);
+  const prevRows = prevYear ? Object.fromEntries(detailRows(prevYear).map((r) => [r.key, r.amount])) : null;
+  const total = periodTotals(state.year)[state.metric];
+  const prevTotal = prevYear ? periodTotals(prevYear)[state.metric] : null;
+  // 영업이익의 비중은 매출 대비
+  const base = state.metric === "영업이익" ? periodTotals(state.year)["매출"] : total;
+  const share = (v) => (base ? `${((v / base) * 100).toFixed(1)}%` : "–");
+  const delta = (cur, prev) => (prevRows ? deltaText(cur, prev) : `<span class="muted">–</span>`);
+
+  $("table-title").textContent =
+    `${state.metric} ${state.metric === "영업이익" ? "구성" : "계정과목별 상세"} · ${state.year}년 ${state.month ? state.month + "월" : "연간"}`;
+  $("detail-body").innerHTML = rows.length
+    ? rows.map((r) => `<tr>
+        <td class="muted">${r.code}</td><td>${r.name}</td>
+        <td>${r.amount.toLocaleString("ko-KR")}</td><td>${share(r.amount)}</td>
+        <td>${delta(r.amount, prevRows ? prevRows[r.key] : null)}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="5" class="muted" style="text-align:center">해당 기간 금액이 없습니다</td></tr>`;
+  $("detail-foot").innerHTML = `<tr>
+    <td></td><td>${state.metric} 합계</td>
+    <td>${total.toLocaleString("ko-KR")}</td><td>${share(total)}</td>
+    <td>${delta(total, prevTotal)}</td>
+  </tr>`;
+}
+
+function niceStep(range, ticks) {
+  const raw = range / ticks;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / mag;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+}
+
+function renderChart() {
+  const svg = $("chart");
+  const W = 1000, H = 380;
+  const m = { top: 16, right: 64, bottom: 36, left: 56 };
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  const series = YEARS.map((y) => ({
+    year: y,
+    values: Array.from({ length: 12 }, (_, i) => DATA[y].monthly[String(i + 1).padStart(2, "0")][state.metric]),
+  }));
+  const all = series.flatMap((s) => s.values);
+  let lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+  if (lo === hi) hi = lo + EOK;
+  const step = niceStep(hi - lo, 5);
+  lo = Math.floor(lo / step) * step;
+  hi = Math.ceil(hi / step) * step;
+
+  const x = (i) => m.left + (iw * i) / 11;
+  const y = (v) => m.top + ih - ((v - lo) / (hi - lo)) * ih;
+
+  let out = "";
+  for (let v = lo; v <= hi + step / 2; v += step) {
+    const yy = y(v).toFixed(1);
+    const stroke = Math.abs(v) < step / 2 ? "var(--text-muted)" : "var(--grid)";
+    out += `<line x1="${m.left}" x2="${W - m.right}" y1="${yy}" y2="${yy}" stroke="${stroke}" stroke-width="1"/>`;
+    out += `<text x="${m.left - 10}" y="${yy}" dy="0.32em" text-anchor="end" font-size="12" fill="var(--text-muted)">${fmtEok(v, step >= EOK ? 0 : 1)}</text>`;
+  }
+  const sel = state.month ? state.month - 1 : null;
+  if (sel !== null) {
+    const bw = iw / 11;
+    out += `<rect x="${(x(sel) - bw / 2).toFixed(1)}" y="${m.top}" width="${bw.toFixed(1)}" height="${ih}" fill="var(--accent)" opacity="0.1" rx="4"/>`;
+  }
+  for (let i = 0; i < 12; i++) {
+    const on = i === sel;
+    out += `<text x="${x(i).toFixed(1)}" y="${H - m.bottom + 22}" text-anchor="middle" font-size="12" font-weight="${on ? 700 : 400}" fill="${on ? "var(--text-primary)" : "var(--text-muted)"}">${i + 1}월</text>`;
+  }
+
+  // 선택 연도를 마지막에 그려 위에 오게 한다
+  const ordered = series.filter((s) => s.year !== state.year).concat(series.filter((s) => s.year === state.year));
+  ordered.forEach((s) => {
+    const active = s.year === state.year;
+    const color = seriesColor(s.year);
+    const d = s.values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    out += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${active ? 2.5 : 2}" stroke-linejoin="round" stroke-linecap="round" opacity="${active ? 1 : 0.55}"/>`;
+    const last = s.values[11];
+    out += `<circle cx="${x(11).toFixed(1)}" cy="${y(last).toFixed(1)}" r="4" fill="${color}" stroke="var(--surface-1)" stroke-width="2"/>`;
+    out += `<text x="${x(11) + 10}" y="${y(last).toFixed(1)}" dy="0.32em" font-size="12" font-weight="${active ? 700 : 500}" fill="var(--text-secondary)">${s.year}</text>`;
+    if (sel !== null) {
+      out += `<circle cx="${x(sel).toFixed(1)}" cy="${y(s.values[sel]).toFixed(1)}" r="${active ? 6 : 5}" fill="${color}" stroke="var(--surface-1)" stroke-width="2"/>`;
+    }
+  });
+
+  out += `<line id="crosshair" y1="${m.top}" y2="${m.top + ih}" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>`;
+  out += `<g id="hover-dots"></g>`;
+  out += `<rect id="hit" x="${m.left - iw / 22}" y="${m.top}" width="${iw + iw / 11}" height="${ih + m.bottom}" fill="transparent" style="cursor:pointer"/>`;
+  svg.innerHTML = out;
+
+  $("chart-title").textContent = `월별 ${state.metric} 추이`;
+  $("legend").innerHTML = YEARS.map((yr) =>
+    `<span><i style="background:${seriesColor(yr)}"></i>${yr}년</span>`).join("");
+
+  const hit = $("hit"), cross = $("crosshair"), dots = $("hover-dots"), tip = $("tooltip"), box = $("chart-box");
+  const monthAt = (e) => {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return Math.max(0, Math.min(11, Math.round(((p.x - m.left) / iw) * 11)));
+  };
+  hit.addEventListener("click", (e) => {
+    const month = monthAt(e) + 1;
+    state.month = state.month === month ? null : month;
+    tip.style.display = "none";
+    render();
+  });
+  hit.addEventListener("mousemove", (e) => {
+    const i = monthAt(e);
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i));
+    cross.setAttribute("visibility", "visible");
+    dots.innerHTML = series.map((s) =>
+      `<circle cx="${x(i)}" cy="${y(s.values[i])}" r="5" fill="${seriesColor(s.year)}" stroke="var(--surface-1)" stroke-width="2"/>`).join("");
+    tip.innerHTML = `<div class="t-title">${i + 1}월 ${state.metric}</div>` + series.slice().reverse().map((s) =>
+      `<div class="t-row"><i style="background:${seriesColor(s.year)}"></i>${s.year}년<b>${fmtEok(s.values[i])}억원</b></div>`).join("");
+    tip.style.display = "block";
+    const rect = box.getBoundingClientRect();
+    const px = e.clientX - rect.left, py = e.clientY - rect.top;
+    const left = px + 16 + tip.offsetWidth > rect.width ? px - 16 - tip.offsetWidth : px + 16;
+    tip.style.left = `${Math.max(0, left)}px`;
+    tip.style.top = `${Math.max(0, py - tip.offsetHeight / 2)}px`;
+  });
+  hit.addEventListener("mouseleave", () => {
+    cross.setAttribute("visibility", "hidden");
+    dots.innerHTML = "";
+    tip.style.display = "none";
+  });
+}
+
+function render() {
+  renderButtons($("years"), YEARS, state.year, (y) => { state.year = y; render(); }, (y) => `${y}년`);
+  renderKpis();
+  renderChart();
+  renderTable();
+}
+
+if (YEARS.length) render();
+</script>
+</body>
+</html>
